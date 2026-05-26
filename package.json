@@ -1,0 +1,25 @@
+{
+  "name": "assigment_webhook",
+  "version": "1.0.0",
+  "description": "A production-quality webhook delivery service built with Node.js + TypeScript. Accepts events, fans them out to matching subscriptions, retries failed deliveries with exponential backoff + jitter, and exposes an admin dashboard.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nkmeoo7/Delivery-Service.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Nkmeoo7/Delivery-Service/issues"
+  },
+  "homepage": "https://github.com/Nkmeoo7/Delivery-Service#readme",
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3"
+  }
+}
