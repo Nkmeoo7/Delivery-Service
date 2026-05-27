@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
-import { app, server } from '../src/index';
-import { resetDb } from '../src/db/database';
+import { app, server } from '../src/index.js';
+import { resetDb } from '../src/db/database.js';
 
 // DB_PATH=:memory: is set in vitest.config.ts so each fork gets a fresh in-memory DB
 const ADMIN_KEY = 'change-me-in-production';

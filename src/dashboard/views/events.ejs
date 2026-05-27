@@ -19,6 +19,34 @@ function relTime(ts) {
   <p>Recently ingested events and their fan-out delivery status</p>
 </div>
 
+${error ? `<div class="alert alert-danger">❌ ${error}</div>` : ''}
+${success ? `<div class="alert alert-success">✅ ${success}</div>` : ''}
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h2>Trigger / Ingest Test Event</h2>
+  </div>
+  <div class="card-body" style="padding: 20px;">
+    <form action="/dashboard/events" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; letter-spacing: 0.5px;">Event Type <span style="color:var(--red)">*</span></label>
+        <input type="text" name="type" required placeholder="e.g. order.created" style="background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; color: var(--text); font-size: 13px; outline: none;" />
+      </div>
+      <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+        <label style="font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; letter-spacing: 0.5px;">Payload (JSON) <span style="color:var(--red)">*</span></label>
+        <textarea name="data" required rows="4" style="background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; color: var(--text); font-size: 13px; font-family: 'SF Mono', monospace; outline: none; resize: vertical;">{
+  "orderId": "ORD-98765",
+  "amount": 49.99,
+  "customerName": "John Doe"
+}</textarea>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary" style="padding: 10px 20px; font-size: 13px;">Trigger Event</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="card">
   <div class="card-header">
     <h2>Recent Events</h2>

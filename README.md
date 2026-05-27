@@ -317,14 +317,24 @@ No auth required. Returns `{ "status": "ok", "timestamp": <unix-ms> }`. Use this
 
 ## Dashboard
 
-Open **http://localhost:3000/dashboard** in a browser — no auth required (it's assumed to be an internal tool).
+Open **http://localhost:3000/dashboard** in a browser — no auth required (it's assumed to be an internal admin tool).
 
-| Page | URL | What you can do |
+### Pages and Capabilities
+
+| Page | URL | Interactive Actions |
 |---|---|---|
-| Subscriptions | `/dashboard` | See all subscriptions, delivery stats at a glance |
-| Subscription detail | `/dashboard/subscriptions/:id` | View config, last 100 attempts, click **↩ Retry** on failed/abandoned ones |
-| Events | `/dashboard/events` | Browse recent events, filter by type, paginate |
-| Event detail | `/dashboard/events/:id` | See the full payload + every delivery attempt for this event, with retry buttons |
+| Subscriptions | `/dashboard` | View all active/inactive subscriptions, stats, and **register a new subscription** using the inline form. |
+| Subscription Detail | `/dashboard/subscriptions/:id` | View configuration and logs, trigger manual retries for failed attempts, and **deactivate the subscription** directly. |
+| Events | `/dashboard/events` | Browse event history, search by type, and **trigger/ingest a new test event** via the inline JSON console form. |
+| Event Detail | `/dashboard/events/:id` | View the JSON payload and detailed attempt outcomes (status codes, errors, raw headers, signature status). |
+
+### Interactive Testing (No Postman Required!)
+
+You can test the entire system's functionality directly from the dashboard:
+1. **Register a Subscription:** Go to the Subscriptions tab and enter a target URL (e.g., `https://httpbin.org/post`), an event pattern (e.g., `order.*`), and an optional signing secret.
+2. **Trigger an Event:** Go to the Events tab, specify the event type (e.g., `order.created`), customize the JSON payload, and click **Trigger Event**.
+3. **Inspect/Retry Delivery:** Go to the event's detail page to monitor its delivery. If it failed, click the **↩ Retry** button to re-trigger it.
+4. **Deactivate:** Go to the subscription's detail page and click **Deactivate Subscription** to stop the worker from delivering new events or retrying attempts.
 
 ---
 

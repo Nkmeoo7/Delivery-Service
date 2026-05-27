@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { getBackoffMs } from '../src/worker/deliveryWorker';
+import { getBackoffMs } from '../src/worker/deliveryWorker.js';
 
 describe('getBackoffMs', () => {
   it('attempt 1 = 0 (immediate)', () => {

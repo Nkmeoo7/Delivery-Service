@@ -26,6 +26,36 @@ const totalPending = subscriptions.reduce((a, s) => a + (s.pending_count || 0), 
   <p>Registered webhook endpoints and their delivery statistics</p>
 </div>
 
+${error ? `<div class="alert alert-danger">❌ ${error}</div>` : ''}
+${success ? `<div class="alert alert-success">✅ ${success}</div>` : ''}
+
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <h2>Register New Subscription</h2>
+  </div>
+  <div class="card-body" style="padding: 20px;">
+    <form action="/dashboard/subscriptions" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px;">
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; letter-spacing: 0.5px;">Target URL <span style="color:var(--red)">*</span></label>
+          <input type="url" name="target_url" required placeholder="https://example.com/webhook" style="background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; color: var(--text); font-size: 13px; outline: none;" />
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; letter-spacing: 0.5px;">Event Filter</label>
+          <input type="text" name="event_filter" placeholder="*" value="*" style="background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; color: var(--text); font-size: 13px; outline: none;" />
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+          <label style="font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 600; letter-spacing: 0.5px;">Signing Secret</label>
+          <input type="text" name="secret" placeholder="Optional" style="background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; color: var(--text); font-size: 13px; outline: none;" />
+        </div>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary" style="padding: 10px 20px; font-size: 13px;">Create Subscription</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="stats-row">
   <div class="stat-card">
     <div class="label">Active Subscriptions</div>

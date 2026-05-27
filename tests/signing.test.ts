@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sign, verify } from '../src/services/signing';
+import { sign, verify } from '../src/services/signing.js';
 
 describe('sign', () => {
   it('produces sha256= prefixed signature', () => {

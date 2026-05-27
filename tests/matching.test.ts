@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchPattern } from '../src/services/matching';
+import { matchPattern } from '../src/services/matching.js';
 
 describe('matchPattern', () => {
   it('wildcard * matches everything', () => {
