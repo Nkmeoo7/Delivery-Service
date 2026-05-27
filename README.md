@@ -1,6 +1,98 @@
 # Webhook Delivery Service
 
 A single-process webhook delivery service built with Node.js + TypeScript. Accepts events, fans them out to matching subscriptions, retries failed deliveries with exponential backoff + jitter, and exposes an admin dashboard.
+---
+
+## System Architecture
+
+Below is the high-level architecture of the webhook delivery service, outlining event ingestion, the persistent SQLite WAL transaction, the asynchronous polling worker, payload signing, retry logic, crash recovery, and the admin dashboard.
+
+```mermaid
+flowchart TB
+    %% Styling
+    classDef primary fill:#eef2ff,stroke:#6366f1,stroke-width:2px,color:#1e1b4b;
+    classDef secondary fill:#f0fdf4,stroke:#22c55e,stroke-width:1px,color:#14532d;
+    classDef database fill:#fff7ed,stroke:#f97316,stroke-width:2px,color:#7c2d12;
+    classDef external fill:#fff1f2,stroke:#f43f5e,stroke-width:1px,color:#881337;
+    classDef highlight fill:#faf5ff,stroke:#a855f7,stroke-width:2px,color:#581c87;
+
+    %% Nodes
+    subgraph ClientSpace["Client Space"]
+        Client["Client Ingester (API Caller)"]:::external
+        Operator["Operator (Admin Web Browser)"]:::external
+    end
+
+    subgraph WebhookService["Webhook Delivery Service (Single Process)"]
+        subgraph HTTP_Layer["HTTP API & Dashboard"]
+            Auth["adminAuth Middleware<br/>(X-Admin-Key Verification)"]:::primary
+            API_Events["POST /api/events<br/>(Ingest Event)"]:::primary
+            API_Sub["POST /api/subscriptions<br/>(Manage Subscriptions)"]:::primary
+            Dashboard["GET /dashboard<br/>(EJS Web UI Viewers)"]:::primary
+            RetryAPI["POST /api/attempts/:id/retry<br/>(Manual Retry Route)"]:::primary
+        end
+
+        subgraph CoreDB["SQLite Database (WAL Mode)"]
+            EventsDB[("events Table")]:::database
+            SubDB[("subscriptions Table")]:::database
+            AttemptsDB[("delivery_attempts Table")]:::database
+        end
+
+        subgraph DeliveryWorker["Delivery Worker (Polling Loop)"]
+            Startup["Startup Recovery<br/>(Reset stuck 'attempting' attempts)"]:::highlight
+            Poll["Periodic Poll Loop<br/>(setInterval at WORKER_INTERVAL_MS)"]:::highlight
+            InFlight{"In-Flight Guard<br/>(Memory Set)"}:::highlight
+            Signer["Payload Signer<br/>(HMAC-SHA256)"]:::highlight
+            Dispatcher["HTTP Dispatcher<br/>(fetch with DELIVERY_TIMEOUT_MS)"]:::highlight
+        end
+    end
+
+    subgraph SubscriberSpace["Subscriber Space"]
+        Subscriber["Subscriber URL<br/>(Receive Webhook POST)"]:::external
+    end
+
+    %% Ingestion Flow Connections
+    Client -->|"1. POST /api/events"| Auth
+    Auth --> API_Events
+    API_Events -->|"2. Query matching active subscriptions"| SubDB
+    API_Events -->|"3. Atomic SQLite Transaction"| CoreDB
+    CoreDB -.->|"Create Event & Delivery Attempt rows"| AttemptsDB
+    API_Events -->|"4. Return 202 Accepted"| Client
+
+    %% Subscriptions Flow Connections
+    Client -->|"POST /api/subscriptions"| Auth
+    Auth --> API_Sub
+    API_Sub -->|"Write Subscription & Secret"| SubDB
+
+    %% Dashboard / Manual Retry Flow Connections
+    Operator -->|"View metrics, logs, details"| Dashboard
+    Dashboard -->|"Read data"| CoreDB
+    Operator -->|"Click 'Retry' button"| RetryAPI
+    RetryAPI -->|"Insert immediate pending attempt (bypasses cap)"| AttemptsDB
+
+    %% Startup Connections
+    Startup -->|"On startup: Update stuck 'attempting' → 'pending'"| AttemptsDB
+
+    %% Delivery Poll Flow Connections
+    Poll -->|"1. Fetch due pending rows"| AttemptsDB
+    Poll -->|"2. Check concurrency/duplicate locks"| InFlight
+    InFlight -->|"If allowed"| Signer
+    Signer -->|"3. Compute HMAC signature"| Dispatcher
+    Dispatcher -->|"4. HTTP POST"| Subscriber
+
+    %% Post-Delivery Classification Connections
+    Subscriber -->|"Success (2xx)"| Delivered["Update Status: 'delivered'"]:::secondary
+    Subscriber -->|"Permanent Fail (4xx except 408/429)"| Fail["Update Status: 'failed'"]:::external
+    Subscriber -->|"Retryable Fail (5xx, 408, 429, Timeout/Network)"| RetryCheck{"Attempt Count &lt; MAX_ATTEMPTS?"}:::highlight
+
+    Delivered -.->|"Write update"| AttemptsDB
+    Fail -.->|"Write update"| AttemptsDB
+
+    RetryCheck -->|"Yes"| ScheduleRetry["Insert NEW 'pending' row<br/>(Exponential Backoff + Jitter)"]:::secondary
+    RetryCheck -->|"No"| Abandon["Update Status: 'abandoned'"]:::external
+
+    ScheduleRetry -.->|"Insert retry"| AttemptsDB
+    Abandon -.->|"Write update"| AttemptsDB
+```
 
 ---
 
