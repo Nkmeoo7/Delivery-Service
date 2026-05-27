@@ -1,9 +1,10 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/database.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 
-const router = Router();
+const router = express.Router();
 
 // GET /api/attempts?eventId=<id> — list all attempts for an event
 router.get('/', adminAuth, (req: Request, res: Response): void => {

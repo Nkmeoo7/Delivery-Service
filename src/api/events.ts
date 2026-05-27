@@ -1,11 +1,12 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { getDb } from '../db/database.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 import { matchPattern } from '../services/matching.js';
 
-const router = Router();
+const router = express.Router();
 
 const IngestEventSchema = z.object({
   type: z.string().min(1, 'Event type is required'),

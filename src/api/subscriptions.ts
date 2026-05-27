@@ -1,10 +1,11 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { getDb } from '../db/database.ts';
-import { adminAuth } from '../middleware/adminAuth.ts';
+import { getDb } from '../db/database.js';
+import { adminAuth } from '../middleware/adminAuth.js';
 
-const router = Router();
+const router = express.Router();
 
 const CreateSubscriptionSchema = z.object({
   target_url: z.string().url('target_url must be a valid URL'),

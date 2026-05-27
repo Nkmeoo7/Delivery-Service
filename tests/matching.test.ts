@@ -1,36 +1,36 @@
 import { describe, it, expect } from 'vitest';
-import { matchesFilter } from '../src/services/matching';
+import { matchPattern } from '../src/services/matching';
 
-describe('matchesFilter', () => {
+describe('matchPattern', () => {
   it('wildcard * matches everything', () => {
-    expect(matchesFilter('order.created', '*')).toBe(true);
-    expect(matchesFilter('user.deleted', '*')).toBe(true);
-    expect(matchesFilter('anything', '*')).toBe(true);
+    expect(matchPattern('order.created', '*')).toBe(true);
+    expect(matchPattern('user.deleted', '*')).toBe(true);
+    expect(matchPattern('anything', '*')).toBe(true);
   });
 
   it('exact match works', () => {
-    expect(matchesFilter('order.created', 'order.created')).toBe(true);
-    expect(matchesFilter('order.created', 'order.updated')).toBe(false);
+    expect(matchPattern('order.created', 'order.created')).toBe(true);
+    expect(matchPattern('order.created', 'order.updated')).toBe(false);
   });
 
   it('glob pattern order.* matches subtypes', () => {
-    expect(matchesFilter('order.created', 'order.*')).toBe(true);
-    expect(matchesFilter('order.updated', 'order.*')).toBe(true);
-    expect(matchesFilter('order.deleted', 'order.*')).toBe(true);
+    expect(matchPattern('order.created', 'order.*')).toBe(true);
+    expect(matchPattern('order.updated', 'order.*')).toBe(true);
+    expect(matchPattern('order.deleted', 'order.*')).toBe(true);
   });
 
   it('glob pattern order.* does not match other domains', () => {
-    expect(matchesFilter('user.created', 'order.*')).toBe(false);
-    expect(matchesFilter('payment.failed', 'order.*')).toBe(false);
+    expect(matchPattern('user.created', 'order.*')).toBe(false);
+    expect(matchPattern('payment.failed', 'order.*')).toBe(false);
   });
 
   it('nested glob user.*.created', () => {
-    expect(matchesFilter('user.profile.created', 'user.*.created')).toBe(true);
-    expect(matchesFilter('user.settings.created', 'user.*.created')).toBe(true);
-    expect(matchesFilter('user.created', 'user.*.created')).toBe(false);
+    expect(matchPattern('user.profile.created', 'user.*.created')).toBe(true);
+    expect(matchPattern('user.settings.created', 'user.*.created')).toBe(true);
+    expect(matchPattern('user.created', 'user.*.created')).toBe(false);
   });
 
   it('does not cross domain boundaries with flat glob', () => {
-    expect(matchesFilter('order', 'order.*')).toBe(false);
+    expect(matchPattern('order', 'order.*')).toBe(false);
   });
 });

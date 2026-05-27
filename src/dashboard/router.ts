@@ -1,7 +1,8 @@
-import { Router, Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import { getDb } from '../db/database.js';
 
-const router = Router();
+const router = express.Router();
 
 // GET /dashboard — subscriptions overview
 router.get('/', (_req: Request, res: Response): void => {

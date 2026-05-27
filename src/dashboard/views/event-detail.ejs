@@ -1,0 +1,107 @@
+<%
+function statusBadge(status) {
+  return `<span class="badge badge-${status}">${status}</span>`;
+}
+function fmtDate(ts) {
+  return ts ? new Date(ts).toLocaleString() : '—';
+}
+const canRetry = (status) => ['failed','abandoned'].includes(status);
+const parsedPayload = (() => { try { return JSON.stringify(JSON.parse(event.payload), null, 2); } catch(e) { return event.payload; } })();
+%>
+<%- include('layout', { title: 'Event Detail', body: `
+
+<div class="page-header">
+  <a href="/dashboard/events" style="font-size:12px;color:var(--muted)">← All Events</a>
+  <h1 style="margin-top:8px">Event: <code style="color:var(--purple)">${event.event_type}</code></h1>
+  <p style="color:var(--muted);font-size:12px;margin-top:4px">ID: ${event.id}</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+  <div class="card">
+    <div class="card-header"><h2>Event Details</h2></div>
+    <dl class="detail-grid">
+      <dt>Event ID</dt>   <dd class="td-mono" style="font-size:11px">${event.id}</dd>
+      <dt>Type</dt>       <dd><code style="color:var(--purple)">${event.event_type}</code></dd>
+      <dt>Ingested</dt>   <dd>${fmtDate(event.ingested_at)}</dd>
+      <dt>Fan-out</dt>    <dd>${attempts.length} subscription(s)</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Payload</h2></div>
+    <div style="padding:14px 16px">
+      <div class="code-block">${parsedPayload.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Delivery Attempts (${attempts.length})</h2>
+  </div>
+  <div class="card-body">
+    ${attempts.length === 0 ? `
+      <div class="empty-state"><p>No matching subscriptions at the time of ingestion.</p></div>
+    ` : `
+    <table>
+      <thead>
+        <tr>
+          <th>Subscription</th>
+          <th>Attempt #</th>
+          <th>Status</th>
+          <th>HTTP</th>
+          <th>Scheduled</th>
+          <th>Attempted</th>
+          <th>Error</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${attempts.map(a => `
+          <tr>
+            <td class="td-url" title="${a.target_url}">
+              <a href="/dashboard/subscriptions/${a.subscription_id}">${a.target_url}</a>
+            </td>
+            <td style="color:var(--muted)">#${a.attempt_number}</td>
+            <td>${statusBadge(a.status)}</td>
+            <td>
+              ${a.response_status
+                ? `<span style="color:${a.response_status < 300 ? 'var(--green)' : a.response_status < 500 ? 'var(--yellow)' : 'var(--red)'}">${a.response_status}</span>`
+                : '<span style="color:var(--muted)">—</span>'}
+            </td>
+            <td style="color:var(--muted);white-space:nowrap;font-size:12px">${fmtDate(a.scheduled_at)}</td>
+            <td style="color:var(--muted);white-space:nowrap;font-size:12px">${fmtDate(a.attempted_at)}</td>
+            <td style="color:var(--red);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.error_message || ''}">${a.error_message || '—'}</td>
+            <td>
+              ${canRetry(a.status) ? `
+                <form method="POST" action="/api/attempts/${a.id}/retry" style="display:inline"
+                  onsubmit="this.querySelector('button').disabled=true;return fetch(this.action,{method:'POST',headers:{'X-Admin-Key':prompt('Admin key?')||''}}).then(()=>location.reload()),false">
+                  <button type="submit" class="btn btn-danger btn-sm">↩ Retry</button>
+                </form>
+              ` : ''}
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    `}
+  </div>
+</div>
+
+<script>
+// Intercept retry buttons to pass admin key
+document.querySelectorAll('form[data-retry]').forEach(form => {
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const key = prompt('Enter Admin Key:');
+    if (!key) return;
+    const resp = await fetch(form.action, {
+      method: 'POST',
+      headers: { 'X-Admin-Key': key }
+    });
+    const data = await resp.json();
+    alert(resp.ok ? 'Retry queued: ' + data.message : 'Error: ' + data.error);
+    if (resp.ok) location.reload();
+  });
+});
+</script>
+` }) %>

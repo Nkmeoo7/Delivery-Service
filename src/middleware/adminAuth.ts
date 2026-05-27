@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { config } from '../config.ts';
+import type { Request, Response, NextFunction } from 'express';
+import { config } from '../config.js';
 
 export function adminAuth(req: Request, res: Response, next: NextFunction): void {
   const key = req.headers['x-admin-key'];
