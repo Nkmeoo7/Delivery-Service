@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= typeof title !== 'undefined' ? title + ' — ' : '' %>Webhook Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --surface2: #21262d;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --accent:   #58a6ff;
+      --green:    #3fb950;
+      --yellow:   #d29922;
+      --orange:   #db6d28;
+      --red:      #f85149;
+      --blue:     #58a6ff;
+      --purple:   #bc8cff;
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px; min-height: 100vh; background: var(--surface);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      padding: 0; position: fixed; top: 0; left: 0; bottom: 0;
+    }
+    .sidebar-brand {
+      padding: 20px 16px; border-bottom: 1px solid var(--border);
+      font-size: 15px; font-weight: 700; letter-spacing: -0.3px;
+    }
+    .sidebar-brand span { color: var(--accent); }
+    .sidebar-brand small { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+    .sidebar-nav { padding: 12px 8px; flex: 1; }
+    .nav-link {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+      border-radius: 6px; color: var(--muted); text-decoration: none;
+      font-size: 13.5px; font-weight: 500; transition: all 0.15s;
+    }
+    .nav-link:hover { background: var(--surface2); color: var(--text); }
+    .nav-link.active { background: var(--surface2); color: var(--accent); }
+    .nav-link .icon { font-size: 15px; }
+    .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+    .sidebar-footer a { font-size: 11px; color: var(--muted); text-decoration: none; }
+    .sidebar-footer a:hover { color: var(--text); }
+
+    /* Main */
+    .main { margin-left: 220px; flex: 1; padding: 32px 36px; max-width: 1200px; }
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 22px; font-weight: 700; }
+    .page-header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+    /* Cards */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-header h2 { font-size: 14px; font-weight: 600; }
+    .card-body { padding: 0; }
+
+    /* Stats row */
+    .stats-row { display: flex; gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px 20px;
+    }
+    .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+    .stat-card .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+    .stat-card .value.green { color: var(--green); }
+    .stat-card .value.red   { color: var(--red); }
+    .stat-card .value.blue  { color: var(--blue); }
+    .stat-card .value.yellow{ color: var(--yellow); }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600;
+         text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
+         border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+    .td-mono { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+    .td-url { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge::before { content: '●'; font-size: 8px; }
+    .badge-delivered { background: rgba(63,185,80,0.15); color: var(--green); }
+    .badge-pending   { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .badge-attempting{ background: rgba(88,166,255,0.15); color: var(--blue); }
+    .badge-failed    { background: rgba(219,109,40,0.15); color: var(--orange); }
+    .badge-abandoned { background: rgba(248,81,73,0.15);  color: var(--red); }
+    .badge-active    { background: rgba(63,185,80,0.15); color: var(--green); }
+    .badge-inactive  { background: rgba(139,148,158,0.15); color: var(--muted); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: none; text-decoration: none; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-danger  { background: rgba(248,81,73,0.2); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+    .btn-danger:hover  { background: rgba(248,81,73,0.3); }
+    .btn-ghost   { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover   { border-color: var(--accent); color: var(--accent); }
+    .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+    /* Links */
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 12px 16px; font-family: 'SF Mono', monospace;
+      font-size: 12px; overflow-x: auto; color: var(--muted);
+      white-space: pre-wrap; word-break: break-all;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 48px 24px; color: var(--muted);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 13px; }
+
+    /* Pagination */
+    .pagination { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+
+    /* Alert */
+    .alert { padding: 12px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; }
+    .alert-info { background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.3); color: var(--blue); }
+
+    /* Detail grid */
+    .detail-grid { display: grid; grid-template-columns: 160px 1fr; gap: 0; }
+    .detail-grid dt {
+      padding: 10px 16px; font-size: 12px; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--border);
+    }
+    .detail-grid dd {
+      padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span>⚡ Webhook</span><br>Delivery Service
+      <small>Admin Dashboard</small>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard" class="nav-link <%= page === 'subscriptions' ? 'active' : '' %>">
+        <span class="icon">📋</span> Subscriptions
+      </a>
+      <a href="/dashboard/events" class="nav-link <%= page === 'events' ? 'active' : '' %>">
+        <span class="icon">⚡</span> Events
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="https://github.com" target="_blank">API Docs →</a>
+    </div>
+  </aside>
+  <main class="main">
+    <%- body %>
+  </main>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<%
+function statusBadge(status) {
+  const map = { delivered: 'green', pending: 'yellow', attempting: 'blue', failed: 'orange', abandoned: 'red' };
+  return `<span class="badge badge-${status}">${status}</span>`;
+}
+function relTime(ts) {
+  if (!ts) return '—';
+  const diff = Date.now() - ts;
+  if (diff < 60000) return `${Math.round(diff/1000)}s ago`;
+  if (diff < 3600000) return `${Math.round(diff/60000)}m ago`;
+  if (diff < 86400000) return `${Math.round(diff/3600000)}h ago`;
+  return new Date(ts).toLocaleDateString();
+}
+%>
+<%- include('layout', { title: 'Events', body: `
+
+<div class="page-header">
+  <h1>Events</h1>
+  <p>Recently ingested events and their fan-out delivery status</p>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Recent Events</h2>
+    <form method="GET" action="/dashboard/events" style="display:flex;gap:8px;align-items:center">
+      <input name="type" value="${typeFilter || ''}"
+        placeholder="Filter by type…"
+        style="background:var(--bg);border:1px solid var(--border);border-radius:6px;
+               padding:5px 10px;color:var(--text);font-size:12px;outline:none" />
+      <button type="submit" class="btn btn-ghost btn-sm">Filter</button>
+      ${typeFilter ? '<a href="/dashboard/events" class="btn btn-ghost btn-sm">✕ Clear</a>' : ''}
+    </form>
+  </div>
+  <div class="card-body">
+    ${events.length === 0 ? `
+      <div class="empty-state">
+        <div class="icon">⚡</div>
+        <p>No events yet.</p>
+        <p style="margin-top:8px">POST to <code>/api/events</code> to ingest one.</p>
+      </div>
+    ` : `
+    <table>
+      <thead>
+        <tr>
+          <th>Event Type</th>
+          <th>Event ID</th>
+          <th>Delivered</th>
+          <th>Pending</th>
+          <th>Abandoned</th>
+          <th>Total</th>
+          <th>Ingested</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${events.map(e => `
+          <tr>
+            <td><code style="color:var(--purple)">${e.event_type}</code></td>
+            <td class="td-mono" style="color:var(--muted);font-size:11px">${e.id.slice(0,8)}…</td>
+            <td style="color:var(--green)">${e.delivered_count || 0}</td>
+            <td style="color:var(--yellow)">${e.pending_count || 0}</td>
+            <td style="color:var(--red)">${e.abandoned_count || 0}</td>
+            <td style="color:var(--muted)">${e.total_attempts || 0}</td>
+            <td style="color:var(--muted);white-space:nowrap">${relTime(e.ingested_at)}</td>
+            <td><a class="btn btn-ghost btn-sm" href="/dashboard/events/${e.id}">Detail →</a></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+
+    <div class="pagination" style="padding:14px 16px">
+      ${offset > 0 ? `<a class="btn btn-ghost btn-sm" href="/dashboard/events?offset=${Math.max(0, offset-50)}${typeFilter?'&type='+typeFilter:''}">← Prev</a>` : ''}
+      <span style="color:var(--muted);font-size:12px">Showing ${offset+1}–${offset+events.length}</span>
+      ${hasMore ? `<a class="btn btn-ghost btn-sm" href="/dashboard/events?offset=${offset+50}${typeFilter?'&type='+typeFilter:''}">Next →</a>` : ''}
+    </div>
+    `}
+  </div>
+</div>
+` }) %>

@@ -1,0 +1,119 @@
+<%
+function statusBadge(status) {
+  return `<span class="badge badge-${status}">${status}</span>`;
+}
+function fmtDate(ts) {
+  return ts ? new Date(ts).toLocaleString() : '—';
+}
+function relTime(ts) {
+  if (!ts) return '—';
+  const diff = Date.now() - ts;
+  if (diff < 60000) return `${Math.round(diff/1000)}s ago`;
+  if (diff < 3600000) return `${Math.round(diff/60000)}m ago`;
+  return `${Math.round(diff/3600000)}h ago`;
+}
+const delivered = attempts.filter(a => a.status === 'delivered').length;
+const abandoned = attempts.filter(a => a.status === 'abandoned').length;
+const pending   = attempts.filter(a => ['pending','attempting','failed'].includes(a.status)).length;
+const canRetry  = (status) => ['failed','abandoned'].includes(status);
+%>
+<%- include('layout', { title: 'Subscription Detail', body: `
+
+<div class="page-header">
+  <a href="/dashboard" style="font-size:12px;color:var(--muted)">← All Subscriptions</a>
+  <h1 style="margin-top:8px">Subscription Detail</h1>
+  <p style="color:var(--muted);font-size:12px;margin-top:4px">ID: ${sub.id}</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
+  <div class="card">
+    <div class="card-header"><h2>Configuration</h2></div>
+    <dl class="detail-grid">
+      <dt>Status</dt>       <dd>${statusBadge(sub.is_active ? 'active' : 'inactive')}</dd>
+      <dt>Target URL</dt>   <dd style="word-break:break-all">${sub.target_url}</dd>
+      <dt>Event Filter</dt> <dd><code>${sub.event_filter}</code></dd>
+      <dt>Secret</dt>       <dd style="color:var(--muted)">${sub.secret ? '●●●●●●●●' : 'None (unsigned)'}</dd>
+      <dt>Created</dt>      <dd>${fmtDate(sub.created_at)}</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <div class="card-header"><h2>Delivery Stats</h2></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:16px;gap:12px">
+      <div style="text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--green)">${delivered}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase">Delivered</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--yellow)">${pending}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase">Pending</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--red)">${abandoned}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase">Abandoned</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h2>Recent Attempts (last 100)</h2></div>
+  <div class="card-body">
+    ${attempts.length === 0 ? `
+      <div class="empty-state"><p>No delivery attempts yet for this subscription.</p></div>
+    ` : `
+    <table>
+      <thead>
+        <tr>
+          <th>Event Type</th>
+          <th>Event ID</th>
+          <th>Attempt #</th>
+          <th>Status</th>
+          <th>HTTP</th>
+          <th>Attempted</th>
+          <th>Error</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${attempts.map(a => `
+          <tr>
+            <td><code style="color:var(--purple)">${a.event_type}</code></td>
+            <td class="td-mono" style="font-size:11px;color:var(--muted)">
+              <a href="/dashboard/events/${a.event_id}">${a.event_id.slice(0,8)}…</a>
+            </td>
+            <td style="color:var(--muted)">#${a.attempt_number}</td>
+            <td>${statusBadge(a.status)}</td>
+            <td>
+              ${a.response_status
+                ? `<span style="color:${a.response_status < 300 ? 'var(--green)' : a.response_status < 500 ? 'var(--yellow)' : 'var(--red)'}">${a.response_status}</span>`
+                : '<span style="color:var(--muted)">—</span>'}
+            </td>
+            <td style="color:var(--muted);font-size:12px;white-space:nowrap">${relTime(a.attempted_at)}</td>
+            <td style="color:var(--red);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.error_message||''}">${a.error_message || '—'}</td>
+            <td>
+              ${canRetry(a.status) ? `
+                <button class="btn btn-danger btn-sm" onclick="retryAttempt('${a.id}')">↩ Retry</button>
+              ` : ''}
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    `}
+  </div>
+</div>
+
+<script>
+async function retryAttempt(id) {
+  const key = prompt('Enter Admin Key:');
+  if (!key) return;
+  const resp = await fetch('/api/attempts/' + id + '/retry', {
+    method: 'POST',
+    headers: { 'X-Admin-Key': key }
+  });
+  const data = await resp.json();
+  alert(resp.ok ? '✅ ' + data.message : '❌ ' + data.error);
+  if (resp.ok) location.reload();
+}
+</script>
+` }) %>

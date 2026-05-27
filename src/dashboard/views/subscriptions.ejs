@@ -1,0 +1,93 @@
+<%
+function statusBadge(status) {
+  return `<span class="badge badge-${status}">${status}</span>`;
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString();
+}
+function relTime(ts) {
+  if (!ts) return '—';
+  const diff = Date.now() - ts;
+  if (diff < 60000) return `${Math.round(diff/1000)}s ago`;
+  if (diff < 3600000) return `${Math.round(diff/60000)}m ago`;
+  return `${Math.round(diff/3600000)}h ago`;
+}
+
+const totalActive = subscriptions.filter(s => s.is_active).length;
+const totalDelivered = subscriptions.reduce((a, s) => a + (s.delivered_count || 0), 0);
+const totalAbandoned = subscriptions.reduce((a, s) => a + (s.abandoned_count || 0), 0);
+const totalPending = subscriptions.reduce((a, s) => a + (s.pending_count || 0), 0);
+%>
+<%- include('layout', { title: 'Subscriptions', body: `
+
+<div class="page-header">
+  <h1>Subscriptions</h1>
+  <p>Registered webhook endpoints and their delivery statistics</p>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="label">Active Subscriptions</div>
+    <div class="value blue">${totalActive}</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Delivered</div>
+    <div class="value green">${totalDelivered}</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">In Queue</div>
+    <div class="value yellow">${totalPending}</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Abandoned</div>
+    <div class="value red">${totalAbandoned}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>All Subscriptions (${subscriptions.length})</h2>
+  </div>
+  <div class="card-body">
+    ${subscriptions.length === 0 ? `
+      <div class="empty-state">
+        <div class="icon">📭</div>
+        <p>No subscriptions yet.</p>
+        <p style="margin-top:8px">POST to <code>/api/subscriptions</code> to register one.</p>
+      </div>
+    ` : `
+    <table>
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Target URL</th>
+          <th>Filter</th>
+          <th>Delivered</th>
+          <th>Pending</th>
+          <th>Abandoned</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${subscriptions.map(s => `
+          <tr>
+            <td>${statusBadge(s.is_active ? 'active' : 'inactive')}</td>
+            <td class="td-url" title="${s.target_url}">
+              <a href="/dashboard/subscriptions/${s.id}">${s.target_url}</a>
+            </td>
+            <td><code>${s.event_filter}</code></td>
+            <td style="color:var(--green)">${s.delivered_count || 0}</td>
+            <td style="color:var(--yellow)">${s.pending_count || 0}</td>
+            <td style="color:var(--red)">${s.abandoned_count || 0}</td>
+            <td style="color:var(--muted);white-space:nowrap">${relTime(s.created_at)}</td>
+            <td><a class="btn btn-ghost btn-sm" href="/dashboard/subscriptions/${s.id}">View →</a></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    `}
+  </div>
+</div>
+` }) %>
