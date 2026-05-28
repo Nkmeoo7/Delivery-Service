@@ -10,7 +10,7 @@ const router = express.Router();
 
 const IngestEventSchema = z.object({
   type: z.string().min(1, 'Event type is required'),
-  data: z.record(z.unknown()).default({}),
+  data: z.record(z.string(), z.unknown()).default({}),
 });
 
 // POST /api/events — ingest an event and atomically fan-out to matching subscriptions
