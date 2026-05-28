@@ -179,6 +179,8 @@ async function poll(): Promise<void> {
     LIMIT ?
   `).all(now, config.workerConcurrency) as AttemptRow[];
 
+  const deliveries: Promise<void>[] = [];
+
   for (const attempt of due) {
     if (inFlight.has(attempt.id)) continue;
     inFlight.add(attempt.id);
@@ -189,18 +191,27 @@ async function poll(): Promise<void> {
       `UPDATE delivery_attempts SET status = 'attempting' WHERE id = ?`
     ).run(attempt.id);
 
-    // Fire-and-forget: do NOT await here so the poll loop isn't blocked
-    deliver(attempt)
+    const p = deliver(attempt)
       .catch(err => {
         console.error(`[worker] Unexpected error delivering ${attempt.id}:`, err);
       })
       .finally(() => {
         inFlight.delete(attempt.id);
       });
+    deliveries.push(p);
+  }
+
+  if (deliveries.length > 0) {
+    await Promise.all(deliveries);
   }
 }
 
 // --- Public API ---
+
+export async function triggerDelivery(): Promise<void> {
+  await poll();
+}
+
 
 export function startWorker(): void {
   const db = getDb();

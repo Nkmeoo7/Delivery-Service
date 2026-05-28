@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { getDb } from '../db/database.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 import { matchPattern } from '../services/matching.js';
+import { triggerDelivery } from '../worker/deliveryWorker.js';
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ const IngestEventSchema = z.object({
 });
 
 // POST /api/events — ingest an event and atomically fan-out to matching subscriptions
-router.post('/', adminAuth, (req: Request, res: Response): void => {
+router.post('/', adminAuth, async (req: Request, res: Response): Promise<void> => {
   const parsed = IngestEventSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
@@ -56,6 +57,14 @@ router.post('/', adminAuth, (req: Request, res: Response): void => {
   });
 
   const { matchCount } = fanOut();
+
+  if (process.env.VERCEL && matchCount > 0) {
+    try {
+      await triggerDelivery();
+    } catch (err) {
+      console.error('[serverless] Trigger delivery failed:', err);
+    }
+  }
 
   res.status(202).json({
     id: eventId,

@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/database.js';
 import { adminAuth } from '../middleware/adminAuth.js';
+import { triggerDelivery } from '../worker/deliveryWorker.js';
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ router.get('/', adminAuth, (req: Request, res: Response): void => {
 });
 
 // POST /api/attempts/:id/retry — manually retry a failed or abandoned attempt
-router.post('/:id/retry', adminAuth, (req: Request, res: Response): void => {
+router.post('/:id/retry', adminAuth, async (req: Request, res: Response): Promise<void> => {
   const db = getDb();
 
   const attempt = db.prepare(`
@@ -78,6 +79,14 @@ router.post('/:id/retry', adminAuth, (req: Request, res: Response): void => {
       (id, event_id, subscription_id, attempt_number, status, scheduled_at)
     VALUES (?, ?, ?, ?, 'pending', ?)
   `).run(newAttemptId, attempt.event_id, attempt.subscription_id, nextAttemptNumber, now);
+
+  if (process.env.VERCEL) {
+    try {
+      await triggerDelivery();
+    } catch (err) {
+      console.error('[serverless] Trigger delivery failed:', err);
+    }
+  }
 
   res.status(201).json({
     id: newAttemptId,

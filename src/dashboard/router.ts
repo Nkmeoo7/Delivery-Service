@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db/database.js';
 import { matchPattern } from '../services/matching.js';
+import { triggerDelivery } from '../worker/deliveryWorker.js';
 
 const router = express.Router();
 
@@ -123,7 +124,7 @@ router.post('/subscriptions', (req: Request, res: Response): void => {
 });
 
 // POST /dashboard/events — trigger/ingest event via form
-router.post('/events', (req: Request, res: Response): void => {
+router.post('/events', async (req: Request, res: Response): Promise<void> => {
   const db = getDb();
   try {
     const type = String(req.body.type || '').trim();
@@ -146,7 +147,7 @@ router.post('/events', (req: Request, res: Response): void => {
     const now = Date.now();
     const envelope = JSON.stringify({ id: eventId, type, timestamp: now, data: parsedData });
 
-    db.transaction(() => {
+    const matchedCount = db.transaction(() => {
       db.prepare(`
         INSERT INTO events (id, event_type, payload, ingested_at)
         VALUES (?, ?, ?, ?)
@@ -165,7 +166,16 @@ router.post('/events', (req: Request, res: Response): void => {
           VALUES (?, ?, ?, 1, 'pending', ?)
         `).run(uuidv4(), eventId, sub.id, now);
       }
+      return matched.length;
     })();
+
+    if (process.env.VERCEL && matchedCount > 0) {
+      try {
+        await triggerDelivery();
+      } catch (err) {
+        console.error('[serverless] Trigger delivery failed:', err);
+      }
+    }
 
     res.redirect(`/dashboard/events?success=${encodeURIComponent('Event ingested and fan-out queued!')}`);
   } catch (err: any) {

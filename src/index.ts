@@ -41,15 +41,17 @@ app.get('/health', (_req, res) => {
 // Initialize DB (runs migration on first call)
 getDb();
 
-// Start delivery worker
-startWorker();
-
-const server = app.listen(config.port, () => {
-  console.log(`\n🚀 Webhook Delivery Service`);
-  console.log(`   API:       http://localhost:${config.port}/api`);
-  console.log(`   Dashboard: http://localhost:${config.port}/dashboard`);
-  console.log(`   Admin key: ${config.adminKey}\n`);
-});
+// Only start polling and HTTP listener if NOT running in Vercel serverless environment
+let server: any;
+if (!process.env.VERCEL) {
+  startWorker();
+  server = app.listen(config.port, () => {
+    console.log(`\n🚀 Webhook Delivery Service`);
+    console.log(`   API:       http://localhost:${config.port}/api`);
+    console.log(`   Dashboard: http://localhost:${config.port}/dashboard`);
+    console.log(`   Admin key: ${config.adminKey}\n`);
+  });
+}
 
 export { app, server };
 export default app;
