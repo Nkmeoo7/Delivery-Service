@@ -139,6 +139,45 @@ Make sure `.env` exists (or export the variables directly) before running `npm s
 
 ---
 
+## Cloud Deployment
+
+Because this application relies on a background polling worker (`setInterval`) and a local database file (`webhook.db`), you must consider the platform architecture before deploying to the cloud.
+
+### Option A: Persistent Containers (Recommended — Render, Railway, Fly.io)
+
+For a single-process service with SQLite, container hosting is the easiest and most cost-effective path:
+1. **Persistent Volume:** Set up a persistent volume (e.g., mount a directory like `/data`) and update your environment variables to point `DB_PATH` to it (e.g., `DB_PATH=/data/webhook.db`). This ensures database records are not lost across redeployments.
+2. **Background Processes:** These platforms keep the Node.js server running 24/7, allowing the `deliveryWorker.ts` polling timer to run continuously.
+
+### Option B: Serverless Deployment (Vercel)
+
+A `vercel.json` file is provided in the repository root to automatically compile the TypeScript files and bundle the EJS dashboard templates. 
+
+#### Vercel Serverless Architecture Considerations
+
+Before deploying to Vercel, you must make two architectural adjustments to handle serverless execution:
+
+1. **Database Persistence:** Serverless functions are ephemeral and run on a read-only filesystem (except `/tmp`). If you use a local file for SQLite, your data will be lost when the Vercel function goes to sleep.
+   * **Solution:** Change `DB_PATH` in your Vercel Environment Variables to point to a cloud database (like Neon Postgres or Vercel Postgres) instead of a local SQLite file.
+2. **Background Polling Worker:** Serverless functions execute on-demand and freeze immediately after sending an HTTP response. The background worker's `setInterval` polling loop will **not** execute persistently.
+   * **Solution:** Create an API route (e.g., `/api/jobs/poll`) that triggers the delivery worker. Then, set up a **Vercel Cron Job** to trigger this endpoint once per minute. Alternatively, you can use a message queue service like **Upstash QStash** to queue and trigger webhook deliveries asynchronously.
+
+#### How to Deploy to Vercel
+
+1. Install the Vercel CLI (or link your repository to GitHub and import it on the Vercel Dashboard):
+   ```bash
+   npm i -g vercel
+   ```
+2. Deploy the project:
+   ```bash
+   vercel
+   ```
+3. Set your production Environment Variables on Vercel:
+   * `ADMIN_KEY`: Your secret administration authorization key.
+   * `DB_PATH`: Your cloud database URL.
+
+---
+
 ## Running Tests
 
 ```bash
