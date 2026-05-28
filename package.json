@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "node --import tsx/esm --watch src/index.ts",
     "build": "tsc",
-    "vercel-build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest run --reporter=verbose"
   },

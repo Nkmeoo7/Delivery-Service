@@ -19,9 +19,8 @@ app.use(express.urlencoded({ extended: true }));
 // EJS for the dashboard
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Views live in src/dashboard/views/ — resolve from project root regardless of
-// whether we're running from src/ (dev) or dist/ (production/Vercel)
-const projectRoot = path.resolve(__dirname, process.env.VERCEL ? '../' : '../');
+// Resolve from the project root so it works from both src/ (dev) and dist/ (production)
+const projectRoot = path.resolve(__dirname, '..');
 app.set('view engine', 'ejs');
 app.set('views', path.join(projectRoot, 'src/dashboard/views'));
 
@@ -44,17 +43,15 @@ app.get('/health', (_req, res) => {
 // Initialize DB (runs migration on first call)
 getDb();
 
-// Only start polling and HTTP listener if NOT running in Vercel serverless environment
-let server: any;
-if (!process.env.VERCEL) {
-  startWorker();
-  server = app.listen(config.port, () => {
-    console.log(`\n🚀 Webhook Delivery Service`);
-    console.log(`   API:       http://localhost:${config.port}/api`);
-    console.log(`   Dashboard: http://localhost:${config.port}/dashboard`);
-    console.log(`   Admin key: ${config.adminKey}\n`);
-  });
-}
+// Start the delivery worker polling loop
+startWorker();
+
+const server = app.listen(config.port, () => {
+  console.log(`\n🚀 Webhook Delivery Service`);
+  console.log(`   API:       http://localhost:${config.port}/api`);
+  console.log(`   Dashboard: http://localhost:${config.port}/dashboard`);
+  console.log(`   Admin key: ${config.adminKey}\n`);
+});
 
 export { app, server };
 export default app;

@@ -208,11 +208,6 @@ async function poll(): Promise<void> {
 
 // --- Public API ---
 
-export async function triggerDelivery(): Promise<void> {
-  await poll();
-}
-
-
 export function startWorker(): void {
   const db = getDb();
 
