@@ -2,11 +2,13 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/index.ts",
+      "src": "dist/index.js",
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
-          "src/dashboard/views/**/*.ejs"
+          "dist/**",
+          "src/dashboard/views/**/*.ejs",
+          "node_modules/better-sqlite3/**"
         ]
       }
     }
@@ -14,7 +16,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "src/index.ts"
+      "dest": "dist/index.js"
     }
   ]
 }

@@ -19,8 +19,11 @@ app.use(express.urlencoded({ extended: true }));
 // EJS for the dashboard
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+// Views live in src/dashboard/views/ — resolve from project root regardless of
+// whether we're running from src/ (dev) or dist/ (production/Vercel)
+const projectRoot = path.resolve(__dirname, process.env.VERCEL ? '../' : '../');
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'dashboard/views'));
+app.set('views', path.join(projectRoot, 'src/dashboard/views'));
 
 // API routes (protected by X-Admin-Key middleware within each router)
 app.use('/api/subscriptions', subscriptionsRouter);
