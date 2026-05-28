@@ -84,3 +84,33 @@ Zero build step. The templates are rendered server-side with data already fetche
 **Scope I deliberately excluded:**
 - Real-time updates (SSE/WebSocket) — would complicate the server without being essential for correctness. Documented in README as a future improvement.
 - Inline subscription creation form — the spec says this is an admin tool; using `curl` or Postman to create subscriptions is fine.
+
+---
+
+## Deployment Platform
+
+**Choice:** Railway (container hosting).
+
+**What I tried first — Vercel:**
+Vercel was the obvious starting point: free tier, one-click GitHub deploy, no config needed. Two problems surfaced immediately.
+
+*Crash on first deployment (`FUNCTION_INVOCATION_FAILED`):* `better-sqlite3` is not pure JavaScript — it compiles a native C++ `.node` binary during `npm install`. The binary compiled on Vercel's build machine was not compatible with Vercel's runtime environment. The function crashed at startup before serving a single request.
+
+*404 on second attempt:* After switching `vercel.json` to point at the compiled `dist/index.js` and adding a `vercel-build: tsc` script, the build succeeded but every route returned `404 NOT_FOUND`. Vercel's serverless bundler could not locate the function output at the expected path.
+
+**Why fixing Vercel further was not worth it:**
+Even if both surface errors were resolved, three architectural blockers remained that Vercel cannot solve by design:
+
+- *Background worker won't run.* Vercel freezes the Node.js process between requests. `setInterval` never fires. Events would be written to the DB as `pending` and stay there forever — nothing would ever be delivered.
+- *SQLite data is wiped constantly.* Vercel's filesystem is read-only except `/tmp`, and `/tmp` is cleared on every cold start. The entire database would be empty on each new function instance.
+- *In-flight guard breaks.* The delivery worker uses a process-level `Set` (`inFlight`) to prevent double-delivering. On serverless, every request gets a fresh process with an empty `Set` — the guard is bypassed and simultaneous duplicate deliveries become possible.
+
+**Why Railway:**
+Railway runs a real container — `npm start` executes once and the process stays alive. `setInterval` fires on schedule. SQLite writes to a persistent disk volume that survives restarts. `better-sqlite3` compiles its native binary on the same Linux environment it runs on, eliminating the mismatch.
+
+**Alternatives considered:**
+- *Netlify* — same serverless model as Vercel, same three architectural blockers. Ruled out immediately.
+- *Render* — nearly identical to Railway (container hosting, persistent disk, free tier). Would have worked equally well.
+
+**Tradeoff accepted:** Railway's free tier keeps the container running at all times, meaning it always uses some RAM even when idle. Vercel would have been cheaper at zero traffic (true scale-to-zero). For an always-on delivery service with a background polling loop, this is not a tradeoff — the container must be running regardless.
+
